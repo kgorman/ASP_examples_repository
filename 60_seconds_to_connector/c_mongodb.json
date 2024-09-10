@@ -1,0 +1,9 @@
+{
+"name": "TestConnectorSource",
+"type": "Cluster",
+"clusterName": "<<changeme>>",
+"dbRoleToExecute": {
+  "role": "readWriteAnyDatabase",
+  "type": "BUILT_IN"
+  }
+}

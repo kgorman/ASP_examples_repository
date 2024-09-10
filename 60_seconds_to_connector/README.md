@@ -1,57 +1,118 @@
 
-60 Seconds to MongoDB Atlas Stream Processing
-==============
+# 60 Seconds to MongoDB Atlas Stream Processing
 
 This is an example session of creating a Kafka connector in Atlas Stream Processing using the
-Atlas Administrative API. 
+Atlas Administrative API.
 
+## Prerequisites
+1. The Atlas CLI installed. [Install docs are here](https://www.mongodb.com/docs/atlas/api/atlas-admin-api/). You may already have it installed, you can test by running `atlas help` on the command line.  
+2. The mongosh utility installed. [Install docs are here](https://www.mongodb.com/docs/mongodb-shell/install/)
+3. git and GitHub. The ability to clone from github.
+
+## 1. Clone this repo
+The first step is to clone this repo so you have examples for all of the files on disk.
+```bash
+$ git clone git@github.com:kgorman/ASP_examples_repository.git
+$ cd ASP_examples_repository/60_seconds_to_connector
+```
+
+## 2. Configure the environment for Atlas Stream Processing
+To create a processor that works just like a connector, follow this example, you can copy and paste each command line (without the $ sign) to your terminal, and compare the output against this example. For this example we will connect MongoDB as a source (reading a change stream) and Kafka as the sink (data is pushed to Kafka).
+
+### Authenticate to MongoDB Atlas
+```bash
+# connect to the Atlas Admin API. A window will pop up for you to authenticate
+$ atlas auth login
+$ atlas auth whoami 
+Logged in as yourname@you.com
+```
+
+### Create an instance
+Create a Stream Processing Instance named `ASPConnector` to run your connector on. Billing only happens when the processor is running. This example will cost about $0.19/hr to run (for up to 4 processors). So about $0.05/hr for a single connector. The instance will be created on AWS in US-EAST using the SP10 instance type.
 
 ```bash
+# create an instance to run the stream processor. 
+$ atlas streams instances create ASPConnector --region VIRGINIA_USA --tier SP10 --provider AWS
+Atlas Streams Processor Instance 'ASPConnector' successfully created.
+```
 
-# Prerequisites are a MongoDB Atlas account and Atlas Admin API configured.
-# extra points for having the JSON utility jq installed, but not required.
+### Create the source and sink connections
+Create the source and sink connections in the MongoDB Atlas Stream Processing Connection Registry. These entries can then be referred to by cononical name in our stream processor.
 
-# Connect to the Atlas Admin API. A window will pop up for you to authenticate
-$atlas auth login
-$atlas auth whoami 
-Logged in as kenny.gorman@mongodb.com
+The source connector configuration is saved in the file named c_mongodb.json, open that file and change the `clusterName` to the name of the cluster you will be reading changes from. This must be in the same project you are connected to using `atlas auth login`.
 
-# create an instance to run the stream processor. Note: that billing only
-# happens when running the processor. This test will cost about $0.20.
-# create the instance on AWS in US-EAST using the SP10 instance type.
-$atlas streams instances create KennyViaAPI2 --region VIRGINIA_USA --tier SP10 --provider AWS
-Atlas Streams Processor Instance 'KennyViaAPI2' successfully created.
+Once that change is compelte, create the source in the Connection Registry for our test instance.
 
-# List the instance and return the connect string. Note I am using jq to
-# make the output compact, but you don't have to.
-$atlas streams instance describe KennyViaAPI2 -o json | jq -c .hostnames   
-["xxxxyyyyyy.mongodb.net"]
-
-# now use that output to connect via Mongosh.
-$mongosh "mongodb://xxxxyyyyyy.mongodb.net" --tls --authenticationDatabase admin --username kgorman
-Enter password: ****************
-
-AtlasStreamProcessing> 
-
-# Run a simple stream processor from the sample stream solar source.
-AtlasStreamProcessing>sp.process([{$source:{connectionName:"sample_stream_solar"}}]);
-
-# data will spool back from the sample streaming source!
+```bash
+# create a source connection in the connection registry for MongoDB
+$ atlas streams connections create -f c_mongodb.json -i ASPConnector -o json
 {
-  device_id: 'device_1',
-  group_id: 2,
-  timestamp: '2024-09-05T23:15:01.585+00:00',
-  max_watts: 450,
-  event_type: 0,
-  obs: {
-    watts: 218,
-    temp: 14
-  },
-  _ts: ISODate("2024-09-05T23:15:01.585Z"),
-  _stream_meta: {
-    source: {
-      type: 'generated'
-    }
+  "name": "TestConnectorSource",
+  "type": "Cluster",
+  "clusterName": "StreamSourceDB",
+  "dbRoleToExecute": {
+    "role": "readWriteAnyDatabase",
+    "type": "BUILT_IN"
   }
 }
 ```
+Create a sink to write the data to. In this case a Kafka cluster. Changes for each source collection will be written to a topic with the same name. So for this example collection names must be unique. Change the values for `mechanism`, `usermame`, `password` and `protocol` to match your Kafka cluster credentials and authentication type.
+
+```bash
+# Create a sink connection in the connection registry for Kafka
+$ atlas streams connections create -f c_kafka.json -i ASPConnector -o json
+{
+  "name": "TestConnectorSink",
+  "type": "Kafka",
+  "authentication": {
+    "mechanism": "SCRAM-256",
+    "username": "mongo"
+  },
+  "bootstrapServers": "kafka.xxx.yyy.com:9093",
+  "networking": {
+    "access": {
+      "type": "PUBLIC"
+    }
+  },
+  "security": {
+    "protocol": "PLAINTEXT"
+  }
+}
+```
+### Getting the connection string for the instance
+
+```bash
+# Get a connection string from our instance, and use that to start mongosh
+$ atlas streams instance describe ASPConnector -o json
+{
+  "_id": "66e07c1d7954bd1e9e18d042",
+  "dataProcessRegion": {
+    "cloudProvider": "AWS",
+    "region": "VIRGINIA_USA"
+  },
+  "groupId": "65094f059e0776665611598b",
+  "hostnames": [ 
+    # this is the connection string
+    "atlas-stream-xxx.yyy.zzz.mongodb.net"  
+  ],
+  "name": "ASPConnector",
+  "streamConfig": {
+    "tier": "SP10"
+  }
+}
+```
+
+## 3. Create and run a connector using Atlas Stream Processing
+Use the output from the previous command for the `hostnames` array at element 0, and set that as the connection string for connecting via mongosh. You will need to set your DB username as well.
+
+When mongosh is run it will start the stream processor according to the pipeline defined in `connector.js` and name it `connector01`. It will start moving data from source to sink.
+
+```bash
+# connect via mongosh and run the stream processor
+$ SPI = "mongodb://atlas-stream-xxx.yyy.zzz.mongodb.net"
+$ USERNAME = "myDBusername"
+
+$ mongosh $HOST --tls --authenticationDatabase admin --username $USERNAME ./connector.js
+```
+
+You should now see database changes being propogated over into kafka topics, one topic per collection name! If you want to stop/change/restart the connector at any time run `sp.connector01.stop()` and change the definition in `connector.js` and restart it using `sp.connector01.start()`.
