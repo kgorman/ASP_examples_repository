@@ -39,7 +39,7 @@ Atlas Streams Processor Instance 'ASPConnector' successfully created.
 ### Create the source and sink connections
 Create the source and sink connections in the MongoDB Atlas Stream Processing Connection Registry. These entries can then be referred to by canonical name in our stream processor.
 
-The source connector configuration is saved in the file named c_mongodb.json, open that file and change the `clusterName` to the name of the cluster you will be reading changes from. This must be in the same project you are connected to using `atlas auth login`.
+The source connector configuration is saved in the file named `c_mongodb.json`, open that file and change the `clusterName` to the name of the cluster you will be reading changes from. This must be in the same project you are connected to using `atlas auth login`.
 
 Once that change is compelte, create the source in the Connection Registry for our test instance.
 
@@ -56,7 +56,7 @@ $ atlas streams connections create -f c_mongodb.json -i ASPConnector -o json
   }
 }
 ```
-Create a sink to write the data to. In this case a Kafka cluster. Changes for each source collection will be written to a topic with the same name. So for this example collection names must be unique. Change the values for `mechanism`, `usermame`, `password` and `protocol` to match your Kafka cluster credentials and authentication type.
+The sink confgiuration is saved in a file named `c_kafka.json`. Changes for each source collection will be written to a Kafka topic with the same name. So for this example collection names must be unique. Open the file and change the values for `mechanism`, `usermame`, `password` and `protocol` to match your Kafka cluster credentials and authentication type.
 
 ```bash
 # Create a sink connection in the connection registry for Kafka
