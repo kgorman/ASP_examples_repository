@@ -37,7 +37,7 @@ Atlas Streams Processor Instance 'ASPConnector' successfully created.
 ```
 
 ### Create the source and sink connections
-Create the source and sink connections in the MongoDB Atlas Stream Processing Connection Registry. These entries can then be referred to by cononical name in our stream processor.
+Create the source and sink connections in the MongoDB Atlas Stream Processing Connection Registry. These entries can then be referred to by canonical name in our stream processor.
 
 The source connector configuration is saved in the file named c_mongodb.json, open that file and change the `clusterName` to the name of the cluster you will be reading changes from. This must be in the same project you are connected to using `atlas auth login`.
 
@@ -115,4 +115,4 @@ $ USERNAME = "myDBusername"
 $ mongosh $HOST --tls --authenticationDatabase admin --username $USERNAME ./connector.js
 ```
 
-You should now see database changes being propogated over into kafka topics, one topic per collection name! If you want to stop/change/restart the connector at any time run `sp.connector01.stop()` and change the definition in `connector.js` and restart it using `sp.connector01.start()`.
+You should now see database changes being propagated over into kafka topics, one topic per collection name! If you want to stop/change/restart the connector at any time run `sp.connector01.stop()` and change the definition in `connector.js` and restart it using `sp.connector01.start()`.
