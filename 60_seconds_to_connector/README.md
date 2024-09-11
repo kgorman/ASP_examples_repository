@@ -12,7 +12,7 @@ Atlas Administrative API.
 ## 1. Clone this repo
 The first step is to clone this repo so you have examples for all of the files on disk.
 ```bash
-$ git clone git@github.com:kgorman/ASP_examples_repository.git
+$ git clone https://github.com/kgorman/ASP_examples_repository.git
 $ cd ASP_examples_repository/60_seconds_to_connector
 ```
 
@@ -39,9 +39,9 @@ Atlas Streams Processor Instance 'ASPConnector' successfully created.
 ### Create the source and sink connections
 Create the source and sink connections in the MongoDB Atlas Stream Processing Connection Registry. These entries can then be referred to by canonical name in our stream processor.
 
-The source connector configuration is saved in the file named `c_mongodb.json`, open that file and change the `clusterName` to the name of the cluster you will be reading changes from. This must be in the same project you are connected to using `atlas auth login`.
+The source connector configuration is saved in the file named `c_mongodb.json`, open that file and change the `clusterName` to the name of the cluster you will be reading changes from. This must be in the same project you are connected to using `atlas auth login`. You can list the clusters within the project using `atlas cluster list`.  If you do not have a cllsuter available, create one before proceeding. Note that Atlas Stream Processing does not define a connection as a source or a sink, a connection once defined can seamlessly be used in both scenarios.
 
-Once that change is compelte, create the source in the Connection Registry for our test instance.
+Once that change is complete, create the source in the Connection Registry for our test instance.
 
 ```bash
 # create a source connection in the connection registry for MongoDB
@@ -56,7 +56,7 @@ $ atlas streams connections create -f c_mongodb.json -i ASPConnector -o json
   }
 }
 ```
-The sink confgiuration is saved in a file named `c_kafka.json`. Changes for each source collection will be written to a Kafka topic with the same name. So for this example collection names must be unique. Open the file and change the values for `mechanism`, `usermame`, `password` and `protocol` to match your Kafka cluster credentials and authentication type.
+The sink configuration is saved in a file named `c_kafka.json`. Changes for each source collection will be written to a Kafka topic with the same name. So for this example collection names must be unique. Open the file and change the values for `mechanism`, `username`, `password` and `protocol` to match your Kafka cluster credentials and authentication type.
 
 ```bash
 # Create a sink connection in the connection registry for Kafka
@@ -75,7 +75,7 @@ $ atlas streams connections create -f c_kafka.json -i ASPConnector -o json
     }
   },
   "security": {
-    "protocol": "PLAINTEXT"
+    "protocol": "SASL_PLAINTEXT"
   }
 }
 ```
@@ -105,14 +105,18 @@ $ atlas streams instance describe ASPConnector -o json
 ## 3. Create and run a connector using Atlas Stream Processing
 Use the output from the previous command for the `hostnames` array at element 0, and set that as the connection string for connecting via mongosh. You will need to set your DB username as well.
 
-When mongosh is run it will start the stream processor according to the pipeline defined in `connector.js` and name it `connector01`. It will start moving data from source to sink.
+When mongosh is run it will start the stream processor according to the pipeline defined in `connector.js` and name it `connector01`. It will start moving data from source to sink. Once run, you should now see database changes being propagated over into kafka topics, one topic per collection name!
 
 ```bash
 # connect via mongosh and run the stream processor
 $ SPI = "mongodb://atlas-stream-xxx.yyy.zzz.mongodb.net"
 $ USERNAME = "myDBusername"
 
-$ mongosh $HOST --tls --authenticationDatabase admin --username $USERNAME ./connector.js
+$ mongosh $SPI --tls --authenticationDatabase admin --username $USERNAME ./connector.js
 ```
 
-You should now see database changes being propagated over into kafka topics, one topic per collection name! If you want to stop/change/restart the connector at any time run `sp.connector01.stop()` and change the definition in `connector.js` and restart it using `sp.connector01.start()`.
+If you want to manage the running stream processor, connect to the SPI using mongosh as we did above and explore your stream processor!
+
+- List the statistics of the running stream processor: `sp.connector01.stats()`
+- Stop the stream processor: `sp.connector01.stop()`
+- Start the stream processor: `sp.connector01.start()`
