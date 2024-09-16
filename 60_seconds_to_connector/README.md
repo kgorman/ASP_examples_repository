@@ -6,7 +6,7 @@ Atlas Administrative API.
 
 ## Prerequisites
 1. The Atlas CLI installed. [Install docs are here](https://www.mongodb.com/docs/atlas/api/atlas-admin-api/). You may already have it installed, you can test by running `atlas help` on the command line.  
-2. The mongosh utility installed. [Install docs are here](https://www.mongodb.com/docs/mongodb-shell/install/)
+2. The mongosh utility version 2.0 or above installed. [Install docs are here](https://www.mongodb.com/docs/mongodb-shell/install/).
 3. git and GitHub. The ability to clone from github.
 
 ## 1. Clone this repo
